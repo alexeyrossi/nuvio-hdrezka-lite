@@ -1,5 +1,5 @@
 /*
- * HDRezka Lite, experimental Nuvio JS provider, v0.2.0.
+ * HDRezka Lite, experimental Nuvio JS provider, v0.3.0.
  * Adapted from michat88/nuvio-providers/providers/hdrezka.js,
  * https://github.com/michat88/nuvio-providers
  * SPDX-License-Identifier: GPL-3.0-only
@@ -9,7 +9,10 @@
  * This code is NOT verified against the live HDRezka service.
  */
 
-var REZKA_BASE = 'https://hdrezka.ag/';
+// Search already passes on the user's device; keep that endpoint unchanged.
+var REZKA_SEARCH_BASE = 'https://hdrezka.ag/';
+// User-observed browser destination. Page/API access still needs on-device testing.
+var REZKA_BASE = 'https://hdrezka-home.tv/';
 var TMDB_FALLBACK_KEY = '439c478a771f35c05022f9feabcca01c';
 function tmdbApiKey() {
   var nativeKey = typeof globalThis !== 'undefined' && globalThis.TMDB_API_KEY;
@@ -32,7 +35,7 @@ function request(url, opts) {
   var headers = {};
   Object.keys(COMMON_HEADERS).forEach(function(k) { headers[k] = COMMON_HEADERS[k]; });
   Object.keys(options.headers || {}).forEach(function(k) { headers[k] = options.headers[k]; });
-  log('REQUEST', (options.method || 'GET') + ' ' + url);
+  log('REQUEST', (options.method || 'GET') + ' ' + url.replace(/([?&]api_key=)[^&]*/gi, '$1[REDACTED]'));
   return fetch(url, {
     method: options.method || 'GET',
     headers: headers,
@@ -66,7 +69,7 @@ function parseSearch(html, isSeries, year) {
 }
 
 function search(title, isSeries, year) {
-  var url = REZKA_BASE + 'engine/ajax/search.php?q=' + encodeURIComponent(title);
+  var url = REZKA_SEARCH_BASE + 'engine/ajax/search.php?q=' + encodeURIComponent(title);
   return request(url).then(function(r) { return r.text(); }).then(function(html) {
     log('SEARCH', 'response length=' + html.length + ', title=' + title);
     if (!/<span[^>]+class=["'][^"']*enty/i.test(html)) {
@@ -93,8 +96,9 @@ function chooseTranslator(html, isSeries) {
 }
 
 function absoluteUrl(url) {
-  if (/^https?:\/\//i.test(url)) return url;
-  return REZKA_BASE + String(url).replace(/^\//, '');
+  // Search can return absolute links on the old host. Keep the path, not that host.
+  var path = String(url).trim().replace(/^(?:https?:)?\/\/[^/]+/i, '');
+  return REZKA_BASE + path.replace(/^\/+/, '');
 }
 
 function formEncode(input) {
@@ -151,7 +155,7 @@ function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
     }).then(function(found) {
       if (!found) { log('EMPTY', 'no search matches'); return []; }
       var pageUrl = absoluteUrl(found.url);
-      return request(pageUrl).then(function(r) { return r.text(); }).then(function(page) {
+      return request(pageUrl, { headers: { 'Referer': REZKA_BASE } }).then(function(r) { return r.text(); }).then(function(page) {
         var voice = chooseTranslator(page, isSeries);
         log('TRANSLATOR', voice || 'none');
         if (!voice) return [];
