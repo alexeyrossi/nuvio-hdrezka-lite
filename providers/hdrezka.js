@@ -1,5 +1,5 @@
 /*
- * HDRezka Lite, experimental Nuvio JS provider, v0.1.0.
+ * HDRezka Lite, experimental Nuvio JS provider, v0.2.0.
  * Adapted from michat88/nuvio-providers/providers/hdrezka.js,
  * https://github.com/michat88/nuvio-providers
  * SPDX-License-Identifier: GPL-3.0-only
@@ -10,7 +10,11 @@
  */
 
 var REZKA_BASE = 'https://hdrezka.ag/';
-var TMDB_KEY = '439c478a771f35c05022f9feabcca01c';
+var TMDB_FALLBACK_KEY = '439c478a771f35c05022f9feabcca01c';
+function tmdbApiKey() {
+  var nativeKey = typeof globalThis !== 'undefined' && globalThis.TMDB_API_KEY;
+  return typeof nativeKey === 'string' && nativeKey.length > 8 ? nativeKey : TMDB_FALLBACK_KEY;
+}
 var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36';
 var COMMON_HEADERS = {
   'User-Agent': UA,
@@ -65,6 +69,10 @@ function search(title, isSeries, year) {
   var url = REZKA_BASE + 'engine/ajax/search.php?q=' + encodeURIComponent(title);
   return request(url).then(function(r) { return r.text(); }).then(function(html) {
     log('SEARCH', 'response length=' + html.length + ', title=' + title);
+    if (!/<span[^>]+class=["'][^"']*enty/i.test(html)) {
+      var challenge = /cf-chl|challenge-platform|just a moment|captcha|turnstile|enable javascript/i.test(html);
+      log('SEARCH_FORMAT', (challenge ? 'Possible browser challenge' : 'Unexpected search HTML') + '; length=' + html.length);
+    }
     return parseSearch(html, isSeries, year);
   });
 }
@@ -125,9 +133,10 @@ function getStreams(tmdbId, mediaType, seasonNum, episodeNum) {
   var episode = isSeries ? (parseInt(episodeNum, 10) || 1) : null;
   var endpoint = isSeries ? 'tv' : 'movie';
   var tmdbUrl = 'https://api.themoviedb.org/3/' + endpoint + '/' +
-    encodeURIComponent(String(tmdbId)) + '?api_key=' + encodeURIComponent(TMDB_KEY) + '&language=ru-RU';
+    encodeURIComponent(String(tmdbId)) + '?api_key=' + encodeURIComponent(tmdbApiKey()) + '&language=ru-RU';
   log('BEGIN', 'TMDB=' + tmdbId + ' type=' + kind + ' S=' + season + ' E=' + episode);
   return request(tmdbUrl).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data) throw new Error('TMDB returned empty or invalid JSON');
     var title = isSeries ? data.name : data.title;
     var original = isSeries ? data.original_name : data.original_title;
     var airDate = isSeries ? data.first_air_date : data.release_date;
