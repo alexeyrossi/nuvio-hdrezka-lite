@@ -1,0 +1,36 @@
+{
+  "name": "HDRezka Diagnostics (NOT VIDEO)",
+  "version": "0.1.0",
+  "scrapers": [
+    {
+      "id": "hdcheck-runtime",
+      "name": "01 - Runtime check",
+      "description": "Diagnostic only, NOT VIDEO. Press Test: verifies local JS execution without network. Disable after testing.",
+      "version": "0.1.0",
+      "author": "HDRezka Lite diagnostics",
+      "supportedTypes": ["movie"],
+      "filename": "probe.js",
+      "enabled": true
+    },
+    {
+      "id": "hdcheck-tmdb",
+      "name": "02 - TMDB check",
+      "description": "Diagnostic only, NOT VIDEO. Press Test: checks TMDB metadata HTTP/JSON response. Disable after testing.",
+      "version": "0.1.0",
+      "author": "HDRezka Lite diagnostics",
+      "supportedTypes": ["movie"],
+      "filename": "probe.js",
+      "enabled": true
+    },
+    {
+      "id": "hdcheck-rezka",
+      "name": "03 - HDRezka search check",
+      "description": "Diagnostic only, NOT VIDEO. Press Test: checks HDRezka search independently of TMDB. Disable after testing.",
+      "version": "0.1.0",
+      "author": "HDRezka Lite diagnostics",
+      "supportedTypes": ["movie"],
+      "filename": "probe.js",
+      "enabled": true
+    }
+  ]
+}
