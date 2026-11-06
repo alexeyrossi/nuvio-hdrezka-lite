@@ -1,26 +1,18 @@
 {
   "name": "HDRezka Lite (experimental)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "scrapers": [
     {
       "id": "hdrezka-lite",
       "name": "HDRezka Lite",
-      "description": "Minimal single-provider HDRezka scraper for Nuvio; experimental",
-      "version": "0.2.0",
+      "description": "Experimental: existing search with user-observed hdrezka-home.tv page/API mirror; live playback not verified",
+      "version": "0.3.0",
       "author": "Community / adapted from Michat88",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
+      "supportedTypes": ["movie", "tv"],
       "filename": "providers/hdrezka.js",
       "enabled": true,
-      "formats": [
-        "mp4",
-        "m3u8"
-      ],
-      "contentLanguage": [
-        "ru"
-      ]
+      "formats": ["mp4", "m3u8"],
+      "contentLanguage": ["ru"]
     }
   ]
 }
