@@ -1,4 +1,4 @@
-# HDRezka Lite for Nuvio (experimental)
+# HDRezka Lite v0.2.0 for Nuvio (experimental)
 
 Single-provider Nuvio JavaScript repository adapted from Michat88 HDRezka provider.
 
@@ -25,6 +25,12 @@ In Nuvio Sync → **Plugins** → add repository/manifest URL:
 `https://raw.githubusercontent.com/alexeyrossi/nuvio-hdrezka-lite/refs/heads/main/manifest.json`
 
 Enable **HDRezka Lite**, disable Michat88 Repo during testing, then refresh plugins on Fire TV. Try Test and a real movie/anime. Look for `[HDRezkaLite]` logs.
+
+## v0.2.0 troubleshooting
+
+This patch uses a runtime-supplied TMDB API key when available, falling back to the upstream public key. It also logs `[HDRezkaLite][SEARCH_FORMAT]` for unexpected HTML and likely browser challenges. Neither change guarantees streams.
+
+After updating, refresh the repository in Nuvio and restart the app. If Test still says 0, inspect console diagnostics and share the first `[HDRezkaLite][ERROR]`, `[HTTP]`, or `[SEARCH_FORMAT]` line. If no lines are visible, the provider may not have executed.
 
 ## Status and limitations
 
