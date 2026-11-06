@@ -1,6 +1,6 @@
 {
   "name": "HDRezka Diagnostics (NOT VIDEO)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "scrapers": [
     {
       "id": "hdcheck-runtime",
@@ -35,8 +35,8 @@
     {
       "id": "hdcheck-stream",
       "name": "04 - HDRezka video link check",
-      "description": "Diagnostic only, NOT VIDEO. Press Test: checks the Matrix movie page, translator and video-link API response. Returns three reports, not playable streams. Disable after testing.",
-      "version": "0.2.0",
+      "description": "Diagnostic only, NOT VIDEO. Uses hdrezka-home.tv for page/API and shows the page host and HTTP refusal details. Three reports, not videos.",
+      "version": "0.3.0",
       "author": "HDRezka Lite diagnostics",
       "supportedTypes": ["movie"],
       "filename": "stream-probe.js",
