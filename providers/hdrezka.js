@@ -41,15 +41,15 @@ function request(url, opts) {
 }
 
 function parseSearch(html, isSeries, year) {
-  var re = /<a\\b[^>]*href=["']([^"']+)["'][^>]*>[\\s\\S]{0,250}?<span\\b[^>]*class=["'][^"']*\\benty\\b[^"']*["'][^>]*>([^<]+)<\\/span>[\\s\\S]{0,250}?<\\/a>/gi;
+  var re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>[\s\S]{0,250}?<span\b[^>]*class=["'][^"']*\benty\b[^"']*["'][^>]*>([^<]+)<\/span>[\s\S]{0,250}?<\/a>/gi;
   var candidates = [];
   var m;
   while ((m = re.exec(html)) !== null) {
     var url = m[1];
-    var idmatch = url.match(/\\/(\\d+)-[^/]+\\.html(?:[?#].*)?$/);
+    var idmatch = url.match(/\/(\d+)-[^/]+\.html(?:[?#].*)?$/);
     if (!idmatch) continue;
-    var rawYear = m[0].match(/\\b(?:19|20)\\d{2}\\b/);
-    var itemType = /\\/series\\//.test(url) ? 'tv' : /\\/films\\//.test(url) ? 'movie' : 'other';
+    var rawYear = m[0].match(/\b(?:19|20)\d{2}\b/);
+    var itemType = /\/series\//.test(url) ? 'tv' : /\/films\//.test(url) ? 'movie' : 'other';
     var score = 0;
     if (isSeries && itemType === 'tv') score += 4;
     if (!isSeries && itemType === 'movie') score += 4;
@@ -71,10 +71,10 @@ function search(title, isSeries, year) {
 
 function chooseTranslator(html, isSeries) {
   var initName = isSeries ? 'initCDNSeriesEvents' : 'initCDNMoviesEvents';
-  var initPattern = new RegExp(initName + '\\\\s*\\\\(\\\\s*\\\\d+\\\\s*,\\\\s*(\\\\d+)', 'i');
+  var initPattern = new RegExp(initName + '\\s*\\(\\s*\\d+\\s*,\\s*(\\d+)', 'i');
   var initMatch = html.match(initPattern);
   if (initMatch && initMatch[1] !== '238') return initMatch[1];
-  var re = /data-translator_id\\s*=\\s*["']?(\\d+)/gi;
+  var re = /data-translator_id\s*=\s*["']?(\d+)/gi;
   var m;
   var fallback = null;
   while ((m = re.exec(html)) !== null) {
@@ -85,8 +85,8 @@ function chooseTranslator(html, isSeries) {
 }
 
 function absoluteUrl(url) {
-  if (/^https?:\\/\\//i.test(url)) return url;
-  return REZKA_BASE + String(url).replace(/^\\//, '');
+  if (/^https?:\/\//i.test(url)) return url;
+  return REZKA_BASE + String(url).replace(/^\//, '');
 }
 
 function formEncode(input) {
@@ -100,9 +100,9 @@ function parseVideos(encoded, title, season, episode) {
   var segments = encoded.split(',');
   var streams = [];
   segments.forEach(function(segment) {
-    var label = segment.match(/^\\[([^\\]]+)\\]/);
+    var label = segment.match(/^\[([^\]]+)\]/);
     var quality = label ? label[1].replace(/<[^>]*>/g, '').trim() : 'Unknown';
-    var urlMatch = segment.match(/https?:\\/\\/[^\\s,\\]|<>"']+\\.(?:mp4|m3u8)(?:\\?[^\\s,\\]|<>"']*)?/i);
+    var urlMatch = segment.match(/https?:\/\/[^\s,\]|<>"']+\.(?:mp4|m3u8)(?:\?[^\s,\]|<>"']*)?/i);
     if (!urlMatch) return;
     var streamUrl = urlMatch[0];
     streams.push({
