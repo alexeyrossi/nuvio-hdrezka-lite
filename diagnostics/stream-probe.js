@@ -1,11 +1,13 @@
-/* HDRezka diagnostics, stream-stage probe v0.2.0, 2026-11-06.
+/* HDRezka diagnostics, stream-stage probe v0.3.0, 2026-11-06.
  * SPDX-License-Identifier: GPL-3.0-only
- * Based on HDRezka Lite v0.2.0 (upstream: michat88/nuvio-providers).
+ * Based on HDRezka Lite (upstream: michat88/nuvio-providers).
  * Diagnostic entries are NOT videos. Run Test and disable afterwards.
- * Reproduces the existing movie search/page/translator/POST/parser steps.
+ * Search stays on the previously working host; pages and API use the
+ * user's browser destination. This does not import browser cookies or solve challenges.
  * No TMDB request, video download, credentials, external logging, or settings changes.
  */
-var SP_BASE = 'https://hdrezka.ag/';
+var SP_SEARCH_BASE = 'https://hdrezka.ag/';
+var SP_BASE = 'https://hdrezka-home.tv/';
 var SP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36';
 
 function spSafe(value) {
@@ -20,6 +22,14 @@ function spReport(title, detail) {
         quality: 'NOT VIDEO | ' + spSafe(detail), type: 'diagnostic',
         url: 'data:text/plain;charset=utf-8,' + encodeURIComponent('Not a video. ' + spSafe(title))
     };
+}
+function spHost(url) {
+    var match = String(url || '').match(/^https?:\/\/([^/?#]+)/i);
+    return match ? match[1] : 'unavailable';
+}
+function spPageUrl(url) {
+    var path = String(url).trim().replace(/^(?:https?:)?\/\/[^/]+/i, '');
+    return SP_BASE + path.replace(/^\/+/, '');
 }
 function spChallenge(html) {
     return /cf-chl|challenge-platform|just a moment|captcha|turnstile|enable javascript|ddos-guard|anubis_challenge|\.within\.website/i.test(html);
@@ -36,8 +46,20 @@ function spRead(url, stage, state, options) {
     if (opts.body !== undefined) request.body = opts.body;
     return Promise.resolve().then(function () { return fetch(url, request); }).then(function (response) {
         state.http.push(stage + '=' + response.status);
-        if (!response.ok) throw new Error(stage + ': HTTP ' + response.status);
-        return response.text();
+        if (stage === 'PAGE') {
+            state.pageHost = spHost(url);
+            state.finalHost = response.url ? spHost(response.url) : 'not exposed by runtime';
+        }
+        return response.text().then(function (body) {
+            if (!response.ok) {
+                var title = body.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+                state.errorDetail = 'host=' + spHost(url) + '; page title=' + spSafe(title ? title[1] : '(absent)') +
+                    '; browser-check markers=' + (spChallenge(body) ? 'present (heuristic)' : 'absent');
+                if (stage === 'PAGE') state.page = 'HTTP ' + response.status;
+                throw new Error(stage + ': HTTP ' + response.status);
+            }
+            return body;
+        });
     });
 }
 function spFind(html) {
@@ -73,23 +95,24 @@ function spVideoCount(input) {
 function spFinish(state) {
     return [
         spReport('04 / HTTP: ' + (state.http.join(' ') || 'no response'),
-            'Test=Матрица (1999); selected ID=' + (state.id || 'none') + '; stage=' + state.stage),
+            'v0.3.0; page host=' + state.pageHost + '; final=' + state.finalHost + '; ID=' + (state.id || 'none')),
         spReport('04 / TRANSLATOR: ' + (state.voice || 'not reached'),
             'page=' + (state.page || 'not reached') + '; API success=' + state.success + (state.message ? '; message=' + state.message : '')),
         spReport('04 / VIDEO: ' + (state.error ? 'STOPPED' : state.format),
-            state.error || ('url chars=' + state.length + '; parsed links=' + state.count + '; link extraction only, playback NOT tested'))
+            state.error ? state.error + '; ' + state.errorDetail :
+                'url chars=' + state.length + '; parsed links=' + state.count + '; playback NOT tested')
     ];
 }
 function getStreams(tmdbId, mediaType) {
     if (String(tmdbId) !== '603' || String(mediaType || 'movie') !== 'movie') return Promise.resolve([]);
-    var state = { stage: 'SEARCH', http: [], id: '', voice: '', page: '', success: 'not reached', message: '', format: 'not reached', length: 0, count: 0, error: '' };
-    return spRead(SP_BASE + 'engine/ajax/search.php?q=' + encodeURIComponent('Матрица'), 'SEARCH', state)
+    var state = { stage: 'SEARCH', http: [], id: '', voice: '', page: '', success: 'not reached', message: '', format: 'not reached', length: 0, count: 0, error: '', errorDetail: '', pageHost: spHost(SP_BASE), finalHost: 'not reached' };
+    return spRead(SP_SEARCH_BASE + 'engine/ajax/search.php?q=' + encodeURIComponent('Матрица'), 'SEARCH', state)
         .then(function (html) {
             var item = spFind(html);
             if (!item) throw new Error(spChallenge(html) ? 'SEARCH: possible browser check' : 'SEARCH: no parsed movie');
             state.id = item.id;
-            var pageUrl = /^https?:\/\//i.test(item.url) ? item.url : SP_BASE + item.url.replace(/^\//, '');
-            return spRead(pageUrl, 'PAGE', state).then(function (page) {
+            var pageUrl = spPageUrl(item.url);
+            return spRead(pageUrl, 'PAGE', state, { headers: { 'Referer': SP_BASE } }).then(function (page) {
                 state.voice = spVoice(page) || '';
                 var marker = /initCDN(?:Movies|Series)Events/.test(page);
                 state.page = marker ? 'player marker found' : (spChallenge(page) ? 'possible browser check' : 'no player marker');
@@ -118,7 +141,7 @@ function getStreams(tmdbId, mediaType) {
             if (data.success === false) state.error = 'CDN: success=false' + (state.message ? '; ' + state.message : '');
             return spFinish(state);
         }).catch(function (error) {
-            state.error = state.stage + ': ' + spSafe(error && error.message ? error.message : error);
+            state.error = spSafe(error && error.message ? error.message : error);
             return spFinish(state);
         });
 }
